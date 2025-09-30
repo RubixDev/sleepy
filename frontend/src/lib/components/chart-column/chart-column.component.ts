@@ -36,6 +36,6 @@ export class ChartColumnComponent {
   }
 
   protected getColor(idx: number): string {
-    return ['#efbbff', '#800080', '#d896ff', '#800080'][(idx + this.startIndex()) % 4];
+    return `var(--column-color-${(idx + this.startIndex()) % 4})`;
   }
 }
