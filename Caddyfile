@@ -1,0 +1,4 @@
+:4201 {
+    reverse_proxy /api/* localhost:17425
+    reverse_proxy localhost:4200
+}

@@ -1,0 +1,3 @@
+@for (chunk of chunkedData(); track $index) {
+  <app-chart-column [events]="chunk[1]" [startIndex]="chunk[0] % 4" />
+}

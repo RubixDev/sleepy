@@ -1,0 +1,3 @@
+@for (span of spans(); track $index) {
+  <div [style.flex-basis]="span + '%'" [style.background-color]="getColor($index)"></div>
+}
