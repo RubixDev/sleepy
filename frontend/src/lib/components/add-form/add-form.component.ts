@@ -9,6 +9,8 @@ import { FormsModule } from '@angular/forms';
 import { filter, map, merge, shareReplay, startWith, Subject, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AsyncPipe } from '@angular/common';
+import { MatDialog } from '@angular/material/dialog';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-add-form',
@@ -66,12 +68,12 @@ export class AddFormComponent {
     switchMap(() => this.apiService.addEntry$({ time: this.stringValue(), estimated: false })),
     shareReplay(1),
   );
-  // TODO: confirm dialog
   private readonly removeEntry$ = this.removeButtonClick$.pipe(
     switchMap(() => this.apiService.removeEntry$()),
     shareReplay(1),
   );
 
+  // TODO: error handling
   readonly loading$ = merge(
     this.addButtonClick$.pipe(map(() => true)),
     this.removeButtonClick$.pipe(map(() => true)),
@@ -79,12 +81,24 @@ export class AddFormComponent {
     this.removeEntry$.pipe(map(() => false)),
   ).pipe(startWith(false));
 
-  constructor(private apiService: ApiService) {
+  constructor(
+    private apiService: ApiService,
+    private dialog: MatDialog,
+  ) {
     this.loading$
       .pipe(
         filter((loading) => !loading),
         takeUntilDestroyed(),
       )
       .subscribe(() => this.reload.emit());
+  }
+
+  removeEntry() {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: { message: 'Are you sure you want to delete the last entry?' },
+    });
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) this.removeButtonClick$.next();
+    });
   }
 }

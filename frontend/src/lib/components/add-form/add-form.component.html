@@ -50,7 +50,7 @@
   <button
     matButton="outlined"
     color="warn"
-    (click)="removeButtonClick$.next()"
+    (click)="removeEntry()"
     [disabled]="(loading$ | async) ?? false"
   >
     Remove Last<mat-icon>delete</mat-icon>
