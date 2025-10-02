@@ -3,6 +3,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
+import { provideNativeDateAdapter } from '@angular/material/core';
 
 import { provideHttpClient, withFetch } from '@angular/common/http';
 
@@ -11,5 +12,6 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideHttpClient(withFetch()),
+    provideNativeDateAdapter(),
   ],
 };

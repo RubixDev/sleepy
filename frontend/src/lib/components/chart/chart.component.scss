@@ -1,10 +1,24 @@
 :host {
+  position: relative;
+  display: block;
+}
+
+#chart-content {
   display: flex;
-  flex-direction: row;
+  flex-direction: row-reverse;
   gap: 0.5rem;
-  overflow: auto;
+  overflow-x: auto;
 
   & > * {
     flex-shrink: 0;
   }
+}
+
+.marker {
+  position: absolute;
+  background-color: var(--mat-sys-outline);
+  width: 100%;
+  left: 0;
+  pointer-events: none;
+  touch-action: none;
 }

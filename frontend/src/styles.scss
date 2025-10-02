@@ -43,3 +43,28 @@ body {
   margin: 0;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
 }
+
+body {
+  padding: 0 1rem;
+  display: grid;
+  align-items: center;
+  justify-content: center;
+}
+
+ngx-mat-timepicker-dial {
+  margin-top: 16px;
+}
+
+button[matButton='outlined'][color='warn'] {
+  @include mat.button-overrides(
+    (
+      outlined-label-text-color: var(--mat-sys-error),
+      outlined-ripple-color: color-mix(
+          in srgb,
+          var(--mat-sys-error) calc(var(--mat-sys-pressed-state-layer-opacity) * 100%),
+          transparent
+        ),
+      outlined-state-layer-color: var(--mat-sys-error),
+    )
+  );
+}

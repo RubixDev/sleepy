@@ -1,0 +1,66 @@
+<form>
+  <mat-form-field>
+    <!-- <mat-label>Choose a date</mat-label> -->
+    <input
+      matInput
+      [matDatepicker]="datePicker"
+      placeholder="01/18/2005"
+      [(ngModel)]="date"
+      [ngModelOptions]="{ standalone: true }"
+      [disabled]="(loading$ | async) ?? false"
+    />
+    <!-- <mat-hint>DD/MM/YYYY</mat-hint> -->
+    <mat-datepicker-toggle matIconSuffix [for]="datePicker" />
+    <mat-datepicker touchUi #datePicker>
+      <mat-datepicker-actions>
+        <button matButton matDatepickerCancel>Cancel</button>
+        <button matButton="elevated" matDatepickerApply>Apply</button>
+      </mat-datepicker-actions>
+    </mat-datepicker>
+  </mat-form-field>
+
+  <mat-form-field>
+    <!-- <mat-label>Choose a time</mat-label> -->
+    <input
+      matInput
+      [ngxMatTimepicker]="timePicker"
+      placeholder="9:00 AM"
+      readonly
+      [(ngModel)]="time"
+      [ngModelOptions]="{ standalone: true }"
+      [disabled]="(loading$ | async) ?? false"
+    />
+    <button type="button" matIconButton matIconSuffix (click)="timePicker.open()">
+      <mat-icon>watch_later</mat-icon>
+    </button>
+    <ngx-mat-timepicker
+      #timePicker
+      [cancelBtnTmpl]="timePickerCancelBtn"
+      [confirmBtnTmpl]="timePickerConfirmBtn"
+    />
+  </mat-form-field>
+
+  <button
+    matButton="filled"
+    (click)="addButtonClick$.next()"
+    [disabled]="(loading$ | async) ?? false"
+  >
+    Add<mat-icon>add</mat-icon>
+  </button>
+  <button
+    matButton="outlined"
+    color="warn"
+    (click)="removeButtonClick$.next()"
+    [disabled]="(loading$ | async) ?? false"
+  >
+    Remove Last<mat-icon>delete</mat-icon>
+  </button>
+</form>
+
+<ng-template #timePickerCancelBtn>
+  <button matButton>Cancel</button>
+</ng-template>
+
+<ng-template #timePickerConfirmBtn>
+  <button matButton="elevated" style="margin-left: 0.5rem">Apply</button>
+</ng-template>

@@ -1,5 +1,5 @@
 use actix_files::Files;
-use actix_web::{App, HttpResponse, HttpServer, Responder, get, web::Data};
+use actix_web::{delete, get, post, web::{Data, Json}, App, HttpResponse, HttpServer, Responder};
 use anyhow::{Context, Result};
 use chrono::{NaiveDateTime, TimeDelta};
 use tokio::{fs, sync::Mutex};
@@ -39,6 +39,31 @@ async fn get_entries(data: Data<AppState>) -> impl Responder {
     )
 }
 
+#[post("/api/entry")]
+async fn add_entry(data: Data<AppState>, Json(body): Json<TimeEntry>) -> impl Responder {
+    let mut data_lock = data.0.lock().await;
+    if data_lock.last().is_some_and(|event| event.time >= body.time) {
+        return HttpResponse::BadRequest().body("New event cannot be before last existing one");
+    }
+    data_lock.push(body);
+
+    match save_to_disk(&data_lock).await {
+        Ok(()) => HttpResponse::NoContent().finish(),
+        Err(_) => HttpResponse::InternalServerError().body("Failed to save new data to disk"),
+    }
+}
+
+#[delete("/api/entry")]
+async fn delete_entry(data: Data<AppState>) -> impl Responder {
+    let mut data_lock = data.0.lock().await;
+    data_lock.pop();
+
+    match save_to_disk(&data_lock).await {
+        Ok(()) => HttpResponse::NoContent().finish(),
+        Err(_) => HttpResponse::InternalServerError().body("Failed to save new data to disk"),
+    }
+}
+
 #[actix_web::main]
 async fn main() -> Result<()> {
     let saved_data = fs::read_to_string(DATA_FILE)
@@ -53,6 +78,8 @@ async fn main() -> Result<()> {
     HttpServer::new(move || {
         App::new()
             .service(get_entries)
+            .service(add_entry)
+            .service(delete_entry)
             .service(Files::new("/", "./frontend/dist/sleepy/browser").index_file("index.html"))
             .app_data(state.clone())
     })

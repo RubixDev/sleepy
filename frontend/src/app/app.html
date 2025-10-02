@@ -1,3 +1,9 @@
 @if (entries$ | async; as entries) {
-  <app-chart [data]="entries" />
+  <mat-card>
+    <mat-card-content>
+      <app-chart [data]="entries" />
+
+      <app-add-form (reload)="reload$.next()" />
+    </mat-card-content>
+  </mat-card>
 }
