@@ -6,11 +6,23 @@ import { NgxMatTimepickerModule } from 'ngx-mat-timepicker';
 import { ApiService } from '../../services/api.service';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { FormsModule } from '@angular/forms';
-import { filter, map, merge, shareReplay, startWith, Subject, switchMap } from 'rxjs';
+import {
+  catchError,
+  filter,
+  map,
+  merge,
+  Observable,
+  shareReplay,
+  startWith,
+  Subject,
+  switchMap,
+} from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AsyncPipe } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { HttpErrorResponse } from '@angular/common/http';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Component({
   selector: 'app-add-form',
@@ -66,24 +78,24 @@ export class AddFormComponent {
 
   private readonly addEntry$ = this.addButtonClick$.pipe(
     switchMap(() => this.apiService.addEntry$({ time: this.stringValue(), estimated: false })),
-    shareReplay(1),
+    catchError((err, cause) => this.showRequestFailure(err, cause)),
   );
   private readonly removeEntry$ = this.removeButtonClick$.pipe(
     switchMap(() => this.apiService.removeEntry$()),
-    shareReplay(1),
+    catchError((err, cause) => this.showRequestFailure(err, cause)),
   );
 
-  // TODO: error handling
   readonly loading$ = merge(
     this.addButtonClick$.pipe(map(() => true)),
     this.removeButtonClick$.pipe(map(() => true)),
     this.addEntry$.pipe(map(() => false)),
     this.removeEntry$.pipe(map(() => false)),
-  ).pipe(startWith(false));
+  ).pipe(startWith(false), shareReplay(1));
 
   constructor(
     private apiService: ApiService,
     private dialog: MatDialog,
+    private snackbar: MatSnackBar,
   ) {
     this.loading$
       .pipe(
@@ -100,5 +112,11 @@ export class AddFormComponent {
     dialogRef.afterClosed().subscribe((result) => {
       if (result) this.removeButtonClick$.next();
     });
+  }
+
+  private showRequestFailure(err: HttpErrorResponse, cause: Observable<void>): Observable<void> {
+    console.log('Request Error', err);
+    this.snackbar.open(err.error, 'Dismiss', { duration: 5000 });
+    return cause.pipe(startWith(undefined));
   }
 }
