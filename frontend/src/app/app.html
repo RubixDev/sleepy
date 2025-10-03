@@ -1,6 +1,8 @@
 @if (entries$ | async; as entries) {
   <mat-card>
     <mat-card-content>
+      <app-theme-picker />
+
       <app-chart [data]="entries" />
 
       <app-add-form (reload)="reload$.next()" />

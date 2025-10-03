@@ -5,10 +5,11 @@ import { AsyncPipe } from '@angular/common';
 import { ChartComponent } from '../lib/components/chart/chart.component';
 import { MatCardModule } from '@angular/material/card';
 import { AddFormComponent } from '../lib/components/add-form/add-form.component';
+import { ThemePickerComponent } from '../lib/components/theme-picker/theme-picker.component';
 
 @Component({
   selector: 'app-root',
-  imports: [AsyncPipe, ChartComponent, MatCardModule, AddFormComponent],
+  imports: [AsyncPipe, ChartComponent, MatCardModule, AddFormComponent, ThemePickerComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   standalone: true,
