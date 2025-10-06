@@ -23,6 +23,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
   selector: 'app-add-form',
@@ -32,6 +33,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     MatIconModule,
     MatButtonModule,
     MatDatepickerModule,
+    MatCheckboxModule,
     FormsModule,
     AsyncPipe,
   ],
@@ -42,6 +44,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export class AddFormComponent {
   readonly reload = output<void>();
 
+  readonly estimated = signal(false);
   readonly date = signal(new Date());
   readonly time = signal(`${new Date().getHours()}:${new Date().getMinutes()}`);
 
@@ -77,7 +80,9 @@ export class AddFormComponent {
   readonly removeButtonClick$ = new Subject<void>();
 
   private readonly addEntry$ = this.addButtonClick$.pipe(
-    switchMap(() => this.apiService.addEntry$({ time: this.stringValue(), estimated: false })),
+    switchMap(() =>
+      this.apiService.addEntry$({ time: this.stringValue(), estimated: this.estimated() }),
+    ),
     catchError((err, cause) => this.showRequestFailure(err, cause)),
   );
   private readonly removeEntry$ = this.removeButtonClick$.pipe(
