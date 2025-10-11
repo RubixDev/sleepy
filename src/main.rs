@@ -1,13 +1,32 @@
+use std::{cmp::Ordering, time::Duration};
+
 use actix_files::Files;
-use actix_web::{delete, get, post, web::{Data, Json}, App, HttpResponse, HttpServer, Responder};
+use actix_web::{
+    App, HttpResponse, HttpServer, Responder, delete, get, post,
+    web::{Data, Json},
+};
 use anyhow::{Context, Result};
-use chrono::{NaiveDateTime, TimeDelta};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use tokio::{fs, sync::Mutex};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct TimeEntry {
     time: NaiveDateTime,
     estimated: bool,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Stats {
+    pub longest_awake: Option<(NaiveDate, String)>,
+    pub shortest_awake: Option<(NaiveDate, String)>,
+    pub longest_asleep: Option<(NaiveDate, String)>,
+    pub shortest_asleep: Option<(NaiveDate, String)>,
+    pub earliest_wake: Option<(NaiveDate, String)>,
+    pub earliest_sleep: Option<(NaiveDate, String)>,
+    pub latest_wake: Option<(NaiveDate, String)>,
+    pub latest_sleep: Option<(NaiveDate, String)>,
+    pub avg_awake: String,
+    pub avg_asleep: String,
 }
 
 pub const DATA_FILE: &str = "data.csv";
@@ -42,7 +61,10 @@ async fn get_entries(data: Data<AppState>) -> impl Responder {
 #[post("/api/entry")]
 async fn add_entry(data: Data<AppState>, Json(body): Json<TimeEntry>) -> impl Responder {
     let mut data_lock = data.0.lock().await;
-    if data_lock.last().is_some_and(|event| event.time >= body.time) {
+    if data_lock
+        .last()
+        .is_some_and(|event| event.time >= body.time)
+    {
         return HttpResponse::BadRequest().body("New event cannot be before last existing one");
     }
     data_lock.push(body);
@@ -64,6 +86,105 @@ async fn delete_entry(data: Data<AppState>) -> impl Responder {
     }
 }
 
+#[get("/api/stats")]
+async fn get_stats(data: Data<AppState>) -> impl Responder {
+    let data_lock = data.0.lock().await;
+    let spans = data_lock
+        .windows(2)
+        .map(|window| {
+            (
+                window[0].time.date(),
+                window[1]
+                    .time
+                    .signed_duration_since(window[0].time)
+                    .to_std()
+                    .expect("end should be after start"),
+            )
+        })
+        .collect::<Vec<_>>();
+
+    HttpResponse::Ok().json(Stats {
+        longest_awake: extremum_span(&spans, false, false),
+        shortest_awake: extremum_span(&spans, false, true),
+        longest_asleep: extremum_span(&spans, true, false),
+        shortest_asleep: extremum_span(&spans, true, true),
+        earliest_wake: extremum_time(&data_lock, false, true),
+        earliest_sleep: extremum_time(&data_lock, true, true),
+        latest_wake: extremum_time(&data_lock, false, false),
+        latest_sleep: extremum_time(&data_lock, true, false),
+        avg_awake: stats_avg(&spans, 0),
+        avg_asleep: stats_avg(&spans, 1),
+    })
+}
+
+trait MinMaxByKey: Iterator {
+    fn min_max_by_key<B, F>(self, min: bool, mut f: F) -> Option<Self::Item>
+    where
+        B: Ord,
+        Self: Sized,
+        F: FnMut(&Self::Item) -> B,
+    {
+        self.reduce(|extremum, e| match (min, f(&extremum).cmp(&f(&e))) {
+            (true, Ordering::Less) => extremum,
+            (true, _) => e,
+            (false, Ordering::Greater) => extremum,
+            (false, _) => e,
+        })
+    }
+}
+
+impl<I: Iterator> MinMaxByKey for I {}
+
+fn extremum_span(
+    spans: &[(NaiveDate, Duration)],
+    sleep: bool,
+    min: bool,
+) -> Option<(NaiveDate, String)> {
+    spans
+        .iter()
+        .skip(sleep as usize)
+        .step_by(2)
+        .min_max_by_key(min, |e| e.1)
+        .map(|&(date, dur)| (date, humantime::format_duration(dur).to_string()))
+}
+
+fn extremum_time(events: &[TimeEntry], sleep: bool, min: bool) -> Option<(NaiveDate, String)> {
+    events
+        .iter()
+        .skip(sleep as usize)
+        .step_by(2)
+        .map(|e| {
+            (
+                e.time,
+                if sleep && e.time.time() < NaiveTime::from_hms_opt(6, 0, 0).unwrap() {
+                    NaiveDate::MIN.and_time(e.time.time()) + TimeDelta::days(1)
+                } else {
+                    NaiveDate::MIN.and_time(e.time.time())
+                },
+            )
+        })
+        .min_max_by_key(min, |e| e.1)
+        .map(|e| {
+            (
+                e.0.date(),
+                e.0.format("%l:%M %P").to_string().trim().to_owned(),
+            )
+        })
+}
+
+fn stats_avg(spans: &[(NaiveDate, Duration)], skip: usize) -> String {
+    let avg = spans
+        .iter()
+        .skip(skip)
+        .step_by(2)
+        .map(|&(_, dur)| dur)
+        .sum::<Duration>()
+        / (spans.len() as u32 / 2);
+    // round down to whole minutes
+    let rounded_avg = Duration::from_secs(avg.as_secs() / 60 * 60);
+    humantime::format_duration(rounded_avg).to_string()
+}
+
 #[actix_web::main]
 async fn main() -> Result<()> {
     let saved_data = fs::read_to_string(DATA_FILE)
@@ -80,6 +201,7 @@ async fn main() -> Result<()> {
             .service(get_entries)
             .service(add_entry)
             .service(delete_entry)
+            .service(get_stats)
             .service(Files::new("/", "./frontend/dist/sleepy/browser").index_file("index.html"))
             .app_data(state.clone())
     })
