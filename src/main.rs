@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, time::Duration};
+use std::time::Duration;
 
 use actix_files::Files;
 use actix_web::{
@@ -7,6 +7,7 @@ use actix_web::{
 };
 use anyhow::{Context, Result};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
+use itertools::Itertools;
 use tokio::{fs, sync::Mutex};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -17,14 +18,14 @@ pub struct TimeEntry {
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Stats {
-    pub longest_awake: Option<(NaiveDate, String)>,
-    pub shortest_awake: Option<(NaiveDate, String)>,
-    pub longest_asleep: Option<(NaiveDate, String)>,
-    pub shortest_asleep: Option<(NaiveDate, String)>,
-    pub earliest_wake: Option<(NaiveDate, String)>,
-    pub earliest_sleep: Option<(NaiveDate, String)>,
-    pub latest_wake: Option<(NaiveDate, String)>,
-    pub latest_sleep: Option<(NaiveDate, String)>,
+    pub longest_awake: Vec<(NaiveDate, String)>,
+    pub shortest_awake: Vec<(NaiveDate, String)>,
+    pub longest_asleep: Vec<(NaiveDate, String)>,
+    pub shortest_asleep: Vec<(NaiveDate, String)>,
+    pub earliest_wake: Vec<(NaiveDate, String)>,
+    pub earliest_sleep: Vec<(NaiveDate, String)>,
+    pub latest_wake: Vec<(NaiveDate, String)>,
+    pub latest_sleep: Vec<(NaiveDate, String)>,
     pub avg_awake: String,
     pub avg_asleep: String,
 }
@@ -117,38 +118,51 @@ async fn get_stats(data: Data<AppState>) -> impl Responder {
     })
 }
 
-trait MinMaxByKey: Iterator {
-    fn min_max_by_key<B, F>(self, min: bool, mut f: F) -> Option<Self::Item>
-    where
-        B: Ord,
-        Self: Sized,
-        F: FnMut(&Self::Item) -> B,
-    {
-        self.reduce(|extremum, e| match (min, f(&extremum).cmp(&f(&e))) {
-            (true, Ordering::Less) => extremum,
-            (true, _) => e,
-            (false, Ordering::Greater) => extremum,
-            (false, _) => e,
-        })
+struct RevIfIter<I> {
+    iter: I,
+    rev: bool,
+}
+
+impl<I: DoubleEndedIterator> Iterator for RevIfIter<I> {
+    type Item = I::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.rev {
+            self.iter.next_back()
+        } else {
+            self.iter.next()
+        }
     }
 }
 
-impl<I: Iterator> MinMaxByKey for I {}
+trait RevIf: DoubleEndedIterator + Sized {
+    fn rev_if(self, should_reverse: bool) -> impl Iterator<Item = Self::Item> {
+        RevIfIter {
+            iter: self,
+            rev: should_reverse,
+        }
+    }
+}
+
+impl<I: DoubleEndedIterator + Sized> RevIf for I {}
 
 fn extremum_span(
     spans: &[(NaiveDate, Duration)],
     sleep: bool,
     min: bool,
-) -> Option<(NaiveDate, String)> {
+) -> Vec<(NaiveDate, String)> {
     spans
         .iter()
         .skip(sleep as usize)
         .step_by(2)
-        .min_max_by_key(min, |e| e.1)
+        .sorted_unstable_by_key(|e| e.1)
+        .rev_if(!min)
+        .take(5)
         .map(|&(date, dur)| (date, humantime::format_duration(dur).to_string()))
+        .collect_vec()
 }
 
-fn extremum_time(events: &[TimeEntry], sleep: bool, min: bool) -> Option<(NaiveDate, String)> {
+fn extremum_time(events: &[TimeEntry], sleep: bool, min: bool) -> Vec<(NaiveDate, String)> {
     events
         .iter()
         .skip(sleep as usize)
@@ -163,13 +177,16 @@ fn extremum_time(events: &[TimeEntry], sleep: bool, min: bool) -> Option<(NaiveD
                 },
             )
         })
-        .min_max_by_key(min, |e| e.1)
+        .sorted_unstable_by_key(|e| e.1)
+        .rev_if(!min)
+        .take(5)
         .map(|e| {
             (
                 e.0.date(),
                 e.0.format("%l:%M %P").to_string().trim().to_owned(),
             )
         })
+        .collect_vec()
 }
 
 fn stats_avg(spans: &[(NaiveDate, Duration)], skip: usize) -> String {

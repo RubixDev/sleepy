@@ -1,0 +1,35 @@
+@if (stats$ | async; as stats) {
+  <mat-card>
+    <mat-card-content>
+      <div id="stats-grid">
+        <span></span>
+        @for (i of columns; track i) {
+          <strong>Top {{ i }}</strong>
+        }
+
+        @for (columnName of columnsWithDate; track columnName) {
+          @let column = getColumn(stats, columnName);
+          <strong>{{ columnName.replaceAll('_', ' ') }}</strong>
+          @for (i of columns; track i) {
+            @let e = column[i - 1];
+            <span>{{ e[1] }} on {{ e[0].toLocaleDateString() }}</span>
+          }
+        }
+
+        <strong>avg. time awake</strong>
+        <span>{{ stats.avg_awake }}</span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+
+        <strong>avg. time asleep</strong>
+        <span>{{ stats.avg_asleep }}</span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+}

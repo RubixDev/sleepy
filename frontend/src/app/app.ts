@@ -6,10 +6,18 @@ import { ChartComponent } from '../lib/components/chart/chart.component';
 import { MatCardModule } from '@angular/material/card';
 import { AddFormComponent } from '../lib/components/add-form/add-form.component';
 import { ThemePickerComponent } from '../lib/components/theme-picker/theme-picker.component';
+import { StatsComponent } from '../lib/components/stats/stats.component';
 
 @Component({
   selector: 'app-root',
-  imports: [AsyncPipe, ChartComponent, MatCardModule, AddFormComponent, ThemePickerComponent],
+  imports: [
+    AsyncPipe,
+    ChartComponent,
+    MatCardModule,
+    AddFormComponent,
+    ThemePickerComponent,
+    StatsComponent,
+  ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
   standalone: true,
