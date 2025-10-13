@@ -1,9 +1,9 @@
-mat-card-content {
-  overflow-x: auto;
-}
-
 #stats-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 1rem;
+  overflow-x: auto;
+  align-items: center;
+  justify-items: center;
+  text-align: center;
 }

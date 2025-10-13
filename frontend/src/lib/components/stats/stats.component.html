@@ -12,7 +12,7 @@
           <strong>{{ columnName.replaceAll('_', ' ') }}</strong>
           @for (i of columns; track i) {
             @let e = column[i - 1];
-            <span>{{ e[1] }} on {{ e[0].toLocaleDateString() }}</span>
+            <span>{{ e[1] }}<br />{{ e[0].toLocaleDateString() }}</span>
           }
         }
 
@@ -25,6 +25,20 @@
 
         <strong>avg. time asleep</strong>
         <span>{{ stats.avg_asleep }}</span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+
+        <strong>avg. wake time</strong>
+        <span>{{ stats.avg_wake }}</span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+
+        <strong>avg. sleep time</strong>
+        <span>{{ stats.avg_sleep }}</span>
         <span></span>
         <span></span>
         <span></span>

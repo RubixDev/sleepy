@@ -6,7 +6,7 @@ use actix_web::{
     web::{Data, Json},
 };
 use anyhow::{Context, Result};
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use itertools::Itertools;
 use tokio::{fs, sync::Mutex};
 
@@ -23,11 +23,13 @@ pub struct Stats {
     pub longest_asleep: Vec<(NaiveDate, String)>,
     pub shortest_asleep: Vec<(NaiveDate, String)>,
     pub earliest_wake: Vec<(NaiveDate, String)>,
-    pub earliest_sleep: Vec<(NaiveDate, String)>,
     pub latest_wake: Vec<(NaiveDate, String)>,
+    pub earliest_sleep: Vec<(NaiveDate, String)>,
     pub latest_sleep: Vec<(NaiveDate, String)>,
     pub avg_awake: String,
     pub avg_asleep: String,
+    pub avg_wake: String,
+    pub avg_sleep: String,
 }
 
 pub const DATA_FILE: &str = "data.csv";
@@ -113,8 +115,10 @@ async fn get_stats(data: Data<AppState>) -> impl Responder {
         earliest_sleep: extremum_time(&data_lock, true, true),
         latest_wake: extremum_time(&data_lock, false, false),
         latest_sleep: extremum_time(&data_lock, true, false),
-        avg_awake: stats_avg(&spans, 0),
-        avg_asleep: stats_avg(&spans, 1),
+        avg_awake: avg_span(&spans, 0),
+        avg_asleep: avg_span(&spans, 1),
+        avg_wake: avg_time(&data_lock, 0),
+        avg_sleep: avg_time(&data_lock, 1),
     })
 }
 
@@ -162,21 +166,21 @@ fn extremum_span(
         .collect_vec()
 }
 
+fn date_adjust_time(time: NaiveTime, extra_condition: bool) -> NaiveDateTime {
+    let base = DateTime::UNIX_EPOCH.date_naive();
+    if extra_condition && time < NaiveTime::from_hms_opt(6, 0, 0).unwrap() {
+        base.and_time(time) + TimeDelta::days(1)
+    } else {
+        base.and_time(time)
+    }
+}
+
 fn extremum_time(events: &[TimeEntry], sleep: bool, min: bool) -> Vec<(NaiveDate, String)> {
     events
         .iter()
         .skip(sleep as usize)
         .step_by(2)
-        .map(|e| {
-            (
-                e.time,
-                if sleep && e.time.time() < NaiveTime::from_hms_opt(6, 0, 0).unwrap() {
-                    NaiveDate::MIN.and_time(e.time.time()) + TimeDelta::days(1)
-                } else {
-                    NaiveDate::MIN.and_time(e.time.time())
-                },
-            )
-        })
+        .map(|e| (e.time, date_adjust_time(e.time.time(), sleep)))
         .sorted_unstable_by_key(|e| e.1)
         .rev_if(!min)
         .take(5)
@@ -189,7 +193,10 @@ fn extremum_time(events: &[TimeEntry], sleep: bool, min: bool) -> Vec<(NaiveDate
         .collect_vec()
 }
 
-fn stats_avg(spans: &[(NaiveDate, Duration)], skip: usize) -> String {
+fn avg_span(spans: &[(NaiveDate, Duration)], skip: usize) -> String {
+    if spans.is_empty() {
+        return String::new();
+    }
     let avg = spans
         .iter()
         .skip(skip)
@@ -200,6 +207,23 @@ fn stats_avg(spans: &[(NaiveDate, Duration)], skip: usize) -> String {
     // round down to whole minutes
     let rounded_avg = Duration::from_secs(avg.as_secs() / 60 * 60);
     humantime::format_duration(rounded_avg).to_string()
+}
+
+fn avg_time(events: &[TimeEntry], skip: usize) -> String {
+    if events.is_empty() {
+        return String::new();
+    }
+    let avg = events
+        .iter()
+        .skip(skip)
+        .step_by(2)
+        .map(|e| date_adjust_time(e.time.time(), true).and_utc().timestamp())
+        .sum::<i64>()
+        / (events.len() as i64 / 2);
+    let avg = DateTime::from_timestamp_secs(avg)
+        .expect("timestamp was retrieved from a DateTime")
+        .time();
+    avg.format("%l:%M %P").to_string().trim().to_owned()
 }
 
 #[actix_web::main]
