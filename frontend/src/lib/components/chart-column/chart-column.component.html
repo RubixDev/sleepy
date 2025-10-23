@@ -1,3 +1,7 @@
 @for (span of spans(); track $index) {
-  <div [style.flex-basis]="span + '%'" [style.background-color]="getColor($index)"></div>
+  <svg:rect
+    [attr.y]="span[0] + '%'"
+    [attr.height]="span[1] + '%'"
+    [class]="'c' + (($index + startIndex()) % 4)"
+  />
 }

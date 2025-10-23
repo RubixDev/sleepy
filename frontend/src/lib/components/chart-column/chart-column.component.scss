@@ -1,26 +1,22 @@
 @use '@angular/material' as mat;
 @use 'sass:map';
 
-:host {
-  display: flex;
-  flex-direction: column;
-  height: 30rem;
+rect {
   width: 1rem;
+}
 
-  --column-color-0: light-dark(
-    #{map.get(mat.$magenta-palette, 80)},
-    #{map.get(mat.$magenta-palette, 70)}
-  );
-  --column-color-1: light-dark(
-    #{map.get(mat.$magenta-palette, 40)},
-    #{map.get(mat.$magenta-palette, 30)}
-  );
-  --column-color-2: light-dark(
-    #{map.get(mat.$magenta-palette, 70)},
-    #{map.get(mat.$magenta-palette, 50)}
-  );
-  --column-color-3: light-dark(
-    #{map.get(mat.$magenta-palette, 40)},
-    #{map.get(mat.$magenta-palette, 30)}
-  );
+rect.c0 {
+  fill: light-dark(#{map.get(mat.$magenta-palette, 80)}, #{map.get(mat.$magenta-palette, 70)});
+}
+
+rect.c1,
+rect.c3 {
+  fill: light-dark(#{map.get(mat.$magenta-palette, 40)}, #{map.get(mat.$magenta-palette, 30)});
+  width: 1.4rem;
+  translate: -0.2rem;
+  rx: 0.15rem;
+}
+
+rect.c2 {
+  fill: light-dark(#{map.get(mat.$magenta-palette, 70)}, #{map.get(mat.$magenta-palette, 50)});
 }

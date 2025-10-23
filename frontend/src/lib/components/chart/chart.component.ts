@@ -26,8 +26,7 @@ export class ChartComponent {
           [(acc[idx - 1] ?? [0, []])[0] + (arr[idx - 1] ?? []).length, chunk] as [number, Date[]],
         ],
         [] as [number, Date[]][],
-      )
-      .reverse(),
+      ),
   );
 
   readonly MARKERS = [

@@ -1,18 +1,24 @@
 <div id="chart-content">
-  @for (chunk of chunkedData(); track $index) {
-    <app-chart-column
-      [events]="chunk[1]"
-      [startIndex]="chunk[0] % 4"
-      [matTooltip]="chunk[1][0].toLocaleDateString()"
-      matTooltipPosition="below"
-    />
-  }
-</div>
+  <svg height="30rem" [attr.width]="chunkedData().length * 1.5 - 0.5 + 'rem'">
+    @for (chunk of chunkedData(); track $index) {
+      <g
+        [style.translate]="$index * 1.5 + 'rem'"
+        app-chart-column
+        [index]="$index"
+        [events]="chunk[1]"
+        [startIndex]="chunk[0] % 4"
+        [matTooltip]="chunk[1][0].toLocaleDateString()"
+        matTooltipPosition="below"
+      />
+    }
 
-@for (marker of MARKERS; track marker[0]) {
-  <div
-    class="marker"
-    [style.top]="(marker[0] * 100) / (24 * 60) + '%'"
-    [style.height]="marker[1] + 'px'"
-  ></div>
-}
+    @for (marker of MARKERS; track marker[0]) {
+      <rect
+        [attr.y]="(marker[0] * 100) / (24 * 60) + '%'"
+        width="100%"
+        [attr.height]="marker[1]"
+        fill="var(--mat-sys-outline)"
+      />
+    }
+  </svg>
+</div>
